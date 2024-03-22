@@ -34,7 +34,7 @@ impl State {
 
     fn viewable_tabs_iter(&self) -> impl Iterator<Item = &TabInfo> {
         let mut tabs : Vec<_> = self.tabs.iter().map(|tab| (tab, self.score(tab))).filter(|tup| tup.1 >= 0).collect();
-        tabs.sort_by(|a, b| a.1.cmp(&b.1));
+        tabs.sort_by(|a, b| b.1.cmp(&a.1));
         tabs.into_iter().map(|tup| tup.0)
     }
 
@@ -76,7 +76,8 @@ impl State {
     }
 
     fn select_up(&mut self) {
-        let tabs = self.viewable_tabs();
+        let mut tabs = self.viewable_tabs();
+        tabs.reverse();
 
         let mut can_select = false;
         let mut last = None;
@@ -131,17 +132,17 @@ impl ZellijPlugin for State {
                 close_focus();
             }
 
-            Event::Key(Key::Down | Key::BackTab) => {
+            Event::Key(Key::Down | Key::Char('J')) => {
                 self.select_down();
 
                 should_render = true;
             }
-            Event::Key(Key::Up | Key::Ctrl('k')) => {
+            Event::Key(Key::Up | Key::Char('K')) => {
                 self.select_up();
 
                 should_render = true;
             }
-            Event::Key(Key::Char('\n')) => {
+            Event::Key(Key::Char('\n') | Key::Char('Y')) => {
                 let tab = self
                     .tabs
                     .iter()
@@ -159,7 +160,7 @@ impl ZellijPlugin for State {
 
                 should_render = true;
             }
-            Event::Key(Key::Char(c)) if c.is_ascii_alphabetic() || c.is_ascii_digit() => {
+            Event::Key(Key::Char(c)) if c.is_ascii() => {
                 self.filter.push(c);
 
                 self.reset_selection();
