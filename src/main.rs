@@ -16,7 +16,9 @@ struct State {
 impl State {
     fn score(&self, tab: &TabInfo) -> i64 {
         let matcher = SkimMatcherV2::default();
-        match matcher.fuzzy_match(&tab.name.to_lowercase(), &self.filter.to_lowercase()) {
+        let index_str = (tab.position + 1).to_string();
+        let search_str = format!("{}: {}", index_str, tab.name);
+        match matcher.fuzzy_match(&search_str.to_lowercase(), &self.filter.to_lowercase()) {
             Some(x) => x,
             None => -1,
         }
@@ -179,7 +181,7 @@ impl ZellijPlugin for State {
             "{} {}",
             ">".cyan().bold(),
             if self.filter.is_empty() {
-                "(filter)".dimmed().italic().to_string()
+                "(filter by index or name)".dimmed().italic().to_string()
             } else {
                 self.filter.dimmed().italic().to_string()
             }
@@ -190,12 +192,12 @@ impl ZellijPlugin for State {
             self.viewable_tabs_iter()
                 .map(|tab| {
                     let row = if tab.active {
-                        format!("{} - {}", tab.position + 1, tab.name)
+                        format!("{}:{}", (tab.position + 1).to_string().bold(), tab.name)
                             .red()
                             .bold()
                             .to_string()
                     } else {
-                        format!("{} - {}", tab.position + 1, tab.name)
+                        format!("{}:{}", (tab.position + 1).to_string().bold(), tab.name)
                     };
 
                     if Some(tab.position) == self.selected {
