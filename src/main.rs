@@ -133,12 +133,12 @@ impl ZellijPlugin for State {
                 close_focus();
             }
 
-            Event::Key(Key::Down | Key::Char('J')) => {
+            Event::Key(Key::Down | Key::Ctrl('n')) => {
                 self.select_down();
 
                 should_render = true;
             }
-            Event::Key(Key::Up | Key::Char('K')) => {
+            Event::Key(Key::Up | Key::Ctrl('p')) => {
                 self.select_up();
 
                 should_render = true;
