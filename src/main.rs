@@ -1,8 +1,11 @@
 use owo_colors::OwoColorize;
 use std::collections::BTreeMap;
 use zellij_tile::prelude::*;
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 
 #[derive(Default)]
+
 struct State {
     tabs: Vec<TabInfo>,
     filter: String,
@@ -11,20 +14,18 @@ struct State {
 }
 
 impl State {
-    fn filter(&self, tab: &&TabInfo) -> bool {
-        if self.ignore_case {
-            tab.name.to_lowercase() == self.filter.to_lowercase()
-                || tab
-                    .name
-                    .to_lowercase()
-                    .contains(&self.filter.to_lowercase())
-        } else {
-            tab.name == self.filter || tab.name.contains(&self.filter)
+    fn score(&self, tab: &TabInfo) -> i64 {
+        let matcher = SkimMatcherV2::default();
+        match matcher.fuzzy_match(&tab.name.to_lowercase(), &self.filter.to_lowercase()) {
+            Some(x) => x,
+            None => -1,
         }
     }
 
     fn viewable_tabs_iter(&self) -> impl Iterator<Item = &TabInfo> {
-        self.tabs.iter().filter(|tab| self.filter(tab))
+        let mut tabs : Vec<_> = self.tabs.iter().map(|tab| (tab, self.score(tab))).filter(|tup| tup.1 >= 0).collect();
+        tabs.sort_by(|a, b| b.1.cmp(&a.1));
+        tabs.into_iter().map(|tup| tup.0)
     }
 
     fn viewable_tabs(&self) -> Vec<&TabInfo> {
@@ -42,7 +43,7 @@ impl State {
     }
 
     fn select_down(&mut self) {
-        let tabs = self.tabs.iter().filter(|tab| self.filter(tab));
+        let tabs = self.viewable_tabs();
 
         let mut can_select = false;
         let mut first = None;
@@ -65,7 +66,8 @@ impl State {
     }
 
     fn select_up(&mut self) {
-        let tabs = self.tabs.iter().filter(|tab| self.filter(tab)).rev();
+        let mut tabs = self.viewable_tabs();
+        tabs.reverse();
 
         let mut can_select = false;
         let mut last = None;
@@ -131,17 +133,17 @@ impl ZellijPlugin for State {
                 close_focus();
             }
 
-            Event::Key(Key::Down | Key::BackTab) => {
+            Event::Key(Key::Down | Key::Char('J')) => {
                 self.select_down();
 
                 should_render = true;
             }
-            Event::Key(Key::Up | Key::Ctrl('k')) => {
+            Event::Key(Key::Up | Key::Char('K')) => {
                 self.select_up();
 
                 should_render = true;
             }
-            Event::Key(Key::Char('\n')) => {
+            Event::Key(Key::Char('\n') | Key::Char('Y')) => {
                 let tab = self
                     .tabs
                     .iter()
@@ -159,7 +161,7 @@ impl ZellijPlugin for State {
 
                 should_render = true;
             }
-            Event::Key(Key::Char(c)) if c.is_ascii_alphabetic() || c.is_ascii_digit() => {
+            Event::Key(Key::Char(c)) if c.is_ascii() => {
                 self.filter.push(c);
 
                 self.reset_selection();
