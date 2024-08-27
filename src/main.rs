@@ -192,16 +192,16 @@ impl ZellijPlugin for State {
             self.viewable_tabs_iter()
                 .map(|tab| {
                     let row = if tab.active {
-                        format!("{}:{}", (tab.position + 1).to_string().bold(), tab.name)
+                        format!("{}:{}", tab.position + 1, tab.name)
                             .red()
                             .bold()
                             .to_string()
                     } else {
-                        format!("{}:{}", (tab.position + 1).to_string().bold(), tab.name)
+                        format!("{}:{}", tab.position + 1, tab.name)
                     };
 
                     if Some(tab.position) == self.selected {
-                        row.on_cyan().to_string()
+                        row.on_cyan().bold().to_string()
                     } else {
                         row
                     }
